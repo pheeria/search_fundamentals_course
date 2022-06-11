@@ -107,6 +107,9 @@ def query():
 
 def create_query(user_query, filters, sort="_score", sortDir="desc"):
     print("Query: {} Filters: {} Sort: {}".format(user_query, filters, sort))
+    sort_obj = {}
+    sort_obj[sort] = sortDir
+
     query_obj = {
         'size': 10,
         "query": {
@@ -116,6 +119,7 @@ def create_query(user_query, filters, sort="_score", sortDir="desc"):
                 "phrase_slop": 3
             }
         },
+        "sort": [sort_obj],
         "aggs": {
             #### Step 4.b.i: create the appropriate query and aggregations here
 
