@@ -107,22 +107,75 @@ def query():
 
 def create_query(user_query, filters, sort="_score", sortDir="desc"):
     print("Query: {} Filters: {} Sort: {}".format(user_query, filters, sort))
-    sort_obj = {}
-    sort_obj[sort] = sortDir
 
     query_obj = {
         'size': 10,
         "query": {
-            "query_string": {
-                "query": user_query,
-                "fields": ["name", "shortDescription", "longDescription"],
-                "phrase_slop": 3
+            "bool": {
+                "must": [
+                    {
+                        "query_string": {
+                            "query": user_query,
+                            "fields": ["name", "shortDescription", "longDescription"],
+                            "phrase_slop": 3
+                        }
+                    }
+                ],
+                "filter": filters
             }
         },
-        "sort": [sort_obj],
+        "sort": [{ sort: sortDir }],
         "aggs": {
             #### Step 4.b.i: create the appropriate query and aggregations here
-
+            "department": {
+                "terms": {
+                    "field": "department.keyword",
+                    "size": 100
+                },
+            },
+            "regularPrice": {
+                "range": {
+                    "field": "regularPrice",
+                    "ranges": [
+                        {
+                            "key": "$",
+                            "from": 1,
+                            "to": 10
+                        },
+                        {
+                            "key": "$$",
+                            "from": 10,
+                            "to": 100
+                        },
+                        {
+                            "key": "$$$",
+                            "from": 100,
+                            "to": 1000
+                        },
+                        {
+                            "key": "$$$$",
+                            "from": 1000,
+                            "to": 10000
+                        },
+                        {
+                            "key": "$$$$$",
+                            "from": 10000,
+                        }
+                    ]
+                }
+            },
+            "missing_images": {
+                "missing": {
+                    "field": "image.keyword"
+                }
+            }
+        },
+        "highlight": {
+            "fields": {
+                "name": {},
+                "shortDescription": {},
+                "longDescription": {}
+            }
         }
     }
     return query_obj
