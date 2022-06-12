@@ -116,7 +116,7 @@ def create_query(user_query, filters, sort="_score", sortDir="desc"):
                     {
                         "query_string": {
                             "query": user_query,
-                            "fields": ["name", "shortDescription", "longDescription"],
+                            "fields": ["name^100", "shortDescription^50", "longDescription^10", "department"],
                             "phrase_slop": 3
                         }
                     }
@@ -139,27 +139,32 @@ def create_query(user_query, filters, sort="_score", sortDir="desc"):
                     "ranges": [
                         {
                             "key": "$",
-                            "from": 1,
-                            "to": 10
-                        },
-                        {
-                            "key": "$$",
-                            "from": 10,
+                            "from": 0,
                             "to": 100
                         },
                         {
-                            "key": "$$$",
+                            "key": "$$",
                             "from": 100,
-                            "to": 1000
+                            "to": 200
+                        },
+                        {
+                            "key": "$$$",
+                            "from": 200,
+                            "to": 300
                         },
                         {
                             "key": "$$$$",
-                            "from": 1000,
-                            "to": 10000
+                            "from": 300,
+                            "to": 400
                         },
                         {
                             "key": "$$$$$",
-                            "from": 10000,
+                            "from": 400,
+                            "to": 500,
+                        },
+                        {
+                            "key": "$$$$$$",
+                            "from": 500,
                         }
                     ]
                 }
