@@ -1,5 +1,4 @@
 # From https://github.com/dshvadskiy/search_with_machine_learning_course/blob/main/index_products.py
-import requests
 from lxml import etree
 
 import click
@@ -7,7 +6,11 @@ import glob
 from opensearchpy import OpenSearch
 from opensearchpy.helpers import bulk
 import logging
-import time
+
+from time import perf_counter
+import concurrent.futures
+
+
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -52,12 +55,10 @@ mappings = {
     "features/*/text()": "features"  # Note the match all here to get the subfields
 }
 
-
 def get_opensearch():
     host = 'localhost'
     port = 9200
     auth = ('admin', 'admin')
-
     #### Step 2.a: Create a connection to OpenSearch
     client = OpenSearch(
         hosts=[{'host': host, 'port': port}],
@@ -71,43 +72,46 @@ def get_opensearch():
     return client
 
 
+def index_file(file, index_name):
+    docs_indexed = 0
+    client = get_opensearch()
+    logger.info(f'Processing file : {file}')
+    tree = etree.parse(file)
+    root = tree.getroot()
+    children = root.findall("./product")
+    docs = []
+    for child in children:
+        doc = {}
+        for xpath_expr, key in mappings.items():
+            doc[key] = child.xpath(xpath_expr)
+        #print(doc)
+        if 'productId' not in doc or len(doc['productId']) == 0:
+            continue
+        #### Step 2.b: Create a valid OpenSearch Doc and bulk index 2000 docs at a time
+        docs.append({ '_index': index_name, '_id': doc['sku'][0], '_source': doc })
+        if len(docs) >= 2000:
+            bulk(client, docs)
+            docs = []
+    if docs:
+        bulk(client, docs)
+
+    return docs_indexed
+
 @click.command()
 @click.option('--source_dir', '-s', help='XML files source directory')
 @click.option('--index_name', '-i', default="bbuy_products", help="The name of the index to write to")
-def main(source_dir: str, index_name: str):
-    client = get_opensearch()
-    # To test on a smaller set of documents, change this glob to be more restrictive than *.xml
+@click.option('--workers', '-w', default=8, help="The number of workers to use to process files")
+def main(source_dir: str, index_name: str, workers: int):
     files = glob.glob(source_dir + "/*.xml")
     docs_indexed = 0
-    tic = time.perf_counter()
-    for file in files:
-        logger.info(f'Processing file : {file}')
-        tree = etree.parse(file)
-        root = tree.getroot()
-        children = root.findall("./product")
-        docs = []
-        for child in children:
-            doc = {}
-            for xpath_expr, key in mappings.items():
-                doc[key] = child.xpath(xpath_expr)
-            # print(doc)
-            if not 'productId' in doc or len(doc['productId']) == 0:
-                continue
+    start = perf_counter()
+    with concurrent.futures.ProcessPoolExecutor(max_workers=workers) as executor:
+        futures = [executor.submit(index_file, file, index_name) for file in files]
+        for future in concurrent.futures.as_completed(futures):
+            docs_indexed += future.result()
 
-            #### Step 2.b: Create a valid OpenSearch Doc and bulk index 2000 docs at a time
-            the_doc = doc
-            the_doc['_index'] = index_name
-            the_doc['_id'] = doc['sku'][0]
-            docs.append(the_doc)
-            if len(docs) >= 2000:
-                bulk(client, docs)
-                docs = []
-        if docs:
-            bulk(client, docs)
-
-    toc = time.perf_counter()
-    logger.info(f'Done. Total docs: {docs_indexed}.  Total time: {((toc - tic) / 60):0.3f} mins.')
-
+    finish = perf_counter()
+    logger.info(f'Done. Total docs: {docs_indexed} in {(finish - start)/60} minutes')
 
 if __name__ == "__main__":
     main()
