@@ -4,7 +4,6 @@ import click
 import pandas as pd
 from opensearchpy import OpenSearch
 from opensearchpy.helpers import bulk
-import string
 
 import logging
 import time
@@ -15,7 +14,6 @@ logger.setLevel(logging.INFO)
 logging.basicConfig(format='%(levelname)s:%(message)s')
 
 def get_opensearch():
-
     host = 'localhost'
     port = 9200
     auth = ('admin', 'admin')
@@ -23,13 +21,13 @@ def get_opensearch():
         hosts=[{'host': host, 'port': port}],
         http_compress=True,  # enables gzip compression for request bodies
         http_auth=auth,
-        # client_cert = client_cert_path,
-        # client_key = client_key_path,
         use_ssl=True,
         verify_certs=False,
         ssl_assert_hostname=False,
         ssl_show_warn=False,
-        #ca_certs=ca_certs_path
+        # client_cert = client_cert_path,
+        # client_key = client_key_path,
+        # ca_certs=ca_certs_path
     )
     return client
 
@@ -48,7 +46,7 @@ def main(source_file: str, index_name: str):
     # Do some clean up work on our data for indexing.
     # Keep in mind, the main thing we are trying to build here is a good suggester, as we are not using these queries
     # for anything else in this class.  If you want to see how to use queries to make your ranking better,
-    # check out our Search with Machine Learning class: https://corise.com/course/search-with-machine-learning?utm_source=daniel.
+    # check out our Search with Machine Learning class: https://corise.com/course/search-with-machine-learning
     # Let's create a field just for suggestions.
     # As there are a lot of near duplicate queries in these logs that only differ by case, let's lowercase them
     df["suggest"] = df["query"].str.lower()
