@@ -26,7 +26,7 @@ def create_query(user_query, filters, sort="_score", sortDir="desc", size=10, in
                         "must": [
 
                         ],
-                        "should":[ #
+                        "should":[
                             {
                                 # Last gasp attempt at matching, based on the assumption the query is misspelled.
                               "match": {
