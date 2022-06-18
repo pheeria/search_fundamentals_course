@@ -63,9 +63,23 @@ def autocomplete():
         print(f"Prefix: {prefix}")
         if prefix is not None:
             type = request.args.get("type", "queries") # If type == queries, this is an autocomplete request, else if products, it's an instant search request.
+            index = "bbuy_queries" if type == "queries" else "bbuy_products"
             ##### W2, L3, S1
-            search_response = None
-            print("TODO: implement autocomplete AND instant search")
+            opensearch = get_opensearch()
+            search_response = opensearch.search(
+                index=index,
+                body={
+                    "suggest": {
+                        "autocomplete": {
+                            "prefix": prefix,
+                            "completion": {
+                                "field": "suggest",
+                                "skip_duplicates": True,
+                            }
+                        }
+                    }
+                })
+            print(search_response)
             if (search_response and search_response['suggest']['autocomplete'] and search_response['suggest']['autocomplete'][0]['length'] > 0): # just a query response
                 results = search_response['suggest']['autocomplete'][0]['options']
     print(f"Results: {results}")
@@ -74,7 +88,7 @@ def autocomplete():
 @bp.route('/query', methods=['GET', 'POST'])
 def query():
     opensearch = get_opensearch()
-    # Put in your code to query opensearch.  Set error as appropriate.
+    # Put in your code to query opensearch. Set error as appropriate.
     error = None
     user_query = None
     query_obj = None
@@ -106,7 +120,7 @@ def query():
 
         query_obj = qu.create_query(user_query,  [], sort, sortDir, size=20)  # We moved create_query to a utility class so we could use it elsewhere.
         ##### W2, L1, S2
-
+        # query_obj["suggest"] = qu.add_spelling_suggestions(user_query)
         ##### W2, L2, S2
         print("Plain ol q: %s" % query_obj)
     elif request.method == 'GET':  # Handle the case where there is no query or just loading the page
@@ -121,7 +135,7 @@ def query():
             (filters, display_filters, applied_filters) = process_filters(filters_input)
         query_obj = qu.create_query(user_query,  filters, sort, sortDir, size=20)
         #### W2, L1, S2
-
+        # query_obj["suggest"] = qu.add_spelling_suggestions(user_query)
         ##### W2, L2, S2
 
     else:
