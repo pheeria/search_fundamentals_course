@@ -157,27 +157,42 @@ def create_query(user_query, filters, sort="_score", sortDir="desc", size=10, in
 # Week 2, Level 2: 
 ##########
 # Give a user query from the UI and the query object we've built so far, adding in spelling suggestions
-def add_spelling_suggestions(query_obj, user_query):
+def add_spelling_suggestions(user_query):
     #### W2, L2, S1
-    print("TODO: IMPLEMENT ME")
-    #query_obj["suggest"] = {
-    #    "text": user_query,
-    #    "phrase_suggest": {
-
-    #    },
-    #    "term_suggest": {
-
-    #    }
-    #}
+    return {
+        "text": user_query,
+        "phrase_suggest": {
+            "phrase": {
+                "direct_generator": [{
+                    "suggest_mode": "popular",
+                    "field": "suggest.trigrams",
+                    "min_word_length": 2,
+                }],
+                "highlight": {
+                    "pre_tag": "<em>",
+                    "post_tag": "</em>"
+                },
+                "field": "suggest.trigrams"
+            }
+        },
+        "term_suggest": {
+            "term": {
+                "suggest_mode": "popular",
+                "min_word_length": 3,
+                "field": "suggest.text"
+            }
+        }
+    }
 
 
 # Given the user query from the UI, the query object we've built so far and a Pandas data GroupBy data frame,
 # construct and add a query that consists of the ids from the items that were clicked on by users for that query
-# priors_gb (loaded in __init__.py) is grouped on query and has a Series of SKUs/doc ids for every document that was cliecked on for this query
+# priors_gb (loaded in __init__.py) is grouped on query and has a Series of SKUs/doc ids for every document that was clicked on for this query
 def add_click_priors(query_obj, user_query, priors_gb):
     try:
         prior_clicks_for_query = priors_gb.get_group(user_query)
         if prior_clicks_for_query is not None and len(prior_clicks_for_query) > 0:
+            print(prior_clicks_for_query)
             click_prior = ""
             #### W2, L1, S1
             # Create a string object of SKUs and weights that will boost documents matching the SKU
