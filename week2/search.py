@@ -121,6 +121,7 @@ def query():
         query_obj = qu.create_query(user_query,  [], sort, sortDir, size=20)  # We moved create_query to a utility class so we could use it elsewhere.
         ##### W2, L1, S2
         query_obj["suggest"] = qu.add_spelling_suggestions(user_query)
+        qu.add_click_priors(query_obj, user_query, prior_clicks)
         ##### W2, L2, S2
         print("Plain ol q: %s" % query_obj)
     elif request.method == 'GET':  # Handle the case where there is no query or just loading the page
@@ -133,13 +134,14 @@ def query():
             explain = True
         if filters_input:
             (filters, display_filters, applied_filters) = process_filters(filters_input)
-        query_obj = qu.create_query(user_query,  filters, sort, sortDir, size=20)
+        query_obj = qu.create_query(user_query, filters, sort, sortDir, size=20)
         #### W2, L1, S2
         query_obj["suggest"] = qu.add_spelling_suggestions(user_query)
+        qu.add_click_priors(query_obj, user_query, prior_clicks)
         ##### W2, L2, S2
 
     else:
-        query_obj = qu.create_query("*", "", [], sort, sortDir, size=100)
+        query_obj = qu.create_query("*", [], sort, sortDir, size=100)
 
     #print("query obj: {}".format(query_obj))
     response = opensearch.search(body=query_obj, index="bbuy_products", explain=explain)

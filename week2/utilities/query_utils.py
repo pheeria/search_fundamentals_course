@@ -1,4 +1,4 @@
-import math
+from collections import defaultdict
 # some helpful tools for dealing with queries
 def create_stats_query(aggs, extended=True):
     print("Creating stats query from %s" % aggs)
@@ -192,13 +192,26 @@ def add_click_priors(query_obj, user_query, priors_gb):
     try:
         prior_clicks_for_query = priors_gb.get_group(user_query)
         if prior_clicks_for_query is not None and len(prior_clicks_for_query) > 0:
-            print(prior_clicks_for_query)
             click_prior = ""
+            total_clicks = prior_clicks_for_query.size
+
+            clicks_per_sku = defaultdict(int)
+            for sku in prior_clicks_for_query["sku"]:
+                clicks_per_sku[sku] += 1
+
+            for sku, clicks in clicks_per_sku.items():
+                boost = clicks / total_clicks
+                click_prior += f"{sku}^{boost} "
+
             #### W2, L1, S1
             # Create a string object of SKUs and weights that will boost documents matching the SKU
-            print("TODO: Implement me")
             if click_prior != "":
-                click_prior_query_obj = None # Implement a query object that matches on the ID or SKU with weights of
+                click_prior_query_obj = {
+                    "query_string": {
+                        "query": click_prior,
+                        "fields": ["sku"]
+                    }
+                } # Implement a query object that matches on the ID or SKU with weights of
                 # This may feel like cheating, but it's really not, esp. in ecommerce where you have all this prior data,
                 if click_prior_query_obj is not None:
                     query_obj["query"]["function_score"]["query"]["bool"]["should"].append(click_prior_query_obj)
